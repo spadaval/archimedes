@@ -1,5 +1,5 @@
 import { Stream } from 'openai/streaming.mjs';
-import { callOpenAI } from './openai';
+import { callOpenAISync } from './openai';
 
 const taskSpecificPrompts = {
 	product_development: `
@@ -44,7 +44,7 @@ const taskSpecificPrompts = {
     `
 };
 
-function getTaskTypePrompt(userMessage: string) {
+export function getTaskTypePrompt(userMessage: string) {
 	return `Analyze the following user message and determine the most appropriate task type from the list below:
     - product_development
     - scientific_research
@@ -57,7 +57,7 @@ User message: "${userMessage}"
 Respond with only the task type, in lowercase, without any additional text or explanation.`;
 }
 
-function getThoughtProcessPrompt(iteration = 1, taskType: keyof typeof taskSpecificPrompts = 'general') {
+export function getThoughtProcessPrompt(iteration = 1, taskType: keyof typeof taskSpecificPrompts = 'general') {
 	taskType = taskSpecificPrompts[taskType] ? taskType : 'general';
 
 	return `This is iteration ${iteration} of the thought process.
@@ -172,7 +172,7 @@ export async function selfEvaluate(thoughtProcess: string): Promise<number> {
 	const prompt = evaluationPrompt.replace('{thoughtProcess}', thoughtProcess);
 
 	// Send the request to OpenAI or other LLM via the existing API call infrastructure
-	const response = await callOpenAI([{ role: 'user', content: prompt }], false); // Assuming sendRequest handles API call, response parsing, and errors
+	const response = await callOpenAISync([{ role: 'user', content: prompt }]); // Assuming sendRequest handles API call, response parsing, and errors
 	if (response instanceof Stream) {
 		throw new Error('Streaming responses are not supported in selfEvaluate');
 	}

@@ -1,26 +1,39 @@
 import { OpenAI } from 'openai'; // Assuming you have an OpenAI client imported
 import { APIError } from 'openai'; // Import the APIError type if needed
-import { settings } from './settings.svelte';
-import type { ChatCompletionMessageParam } from 'openai/resources/chat/completions';
+import { getSettings } from './settings.svelte';
+import type { ChatCompletion, ChatCompletionChunk, ChatCompletionMessageParam } from 'openai/resources/chat/completions';
+import type { Stream } from 'openai/streaming';
 
-export async function callOpenAI(
+export async function callOpenAISync(messages: ChatCompletionMessageParam[]): Promise<ChatCompletion> {
+	return callOpenAI(messages, false) as unknown as Promise<ChatCompletion>;
+}
+
+export async function callOpenAIStream(messages: ChatCompletionMessageParam[]): Promise<Stream<ChatCompletionChunk>> {
+	return callOpenAI(messages, true) as unknown as Promise<Stream<ChatCompletionChunk>>;
+}
+
+async function callOpenAI(
 	messages: ChatCompletionMessageParam[],
 	stream: boolean = true
 ): Promise<ReturnType<OpenAI['chat']['completions']['create']>> {
 	let client = new OpenAI({
-		apiKey: settings.api_key
+		baseURL: getSettings().base_url,
+		apiKey: getSettings().api_key,
+		dangerouslyAllowBrowser: true
 	});
 
 	/**
 	 * Calls the OpenAI API with provided messages and handles potential errors.
 	 */
 	try {
-		console.log(`Calling OpenAI with model: ${settings.model}`);
+		console.log(`Calling OpenAI with model: ${getSettings().model}`);
 		// API call to OpenAI
 		const completion = await client.chat.completions.create({
-			model: settings.model,
+			model: getSettings().model,
 			messages: messages,
-			temperature: settings.temperature,
+			temperature: getSettings().temperature,
+			max_completion_tokens: 2000,
+			max_tokens: 2000,
 			stream: stream
 		});
 		return completion;
@@ -40,7 +53,7 @@ export function prepareMessages(
 	userMessage: string,
 	systemPrompt: string,
 	thoughtProcess?: string
-): any[] {
+): ChatCompletionMessageParam[] {
 	/**
 	 * Prepares the message payload for OpenAI API by organizing chat history and appending the latest user input.
 	 */
